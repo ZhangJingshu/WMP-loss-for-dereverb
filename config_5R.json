@@ -1,0 +1,66 @@
+{
+  "data":{
+      "audio_path": "/vol/research/Dereverb/ARU_Speech_Corpus_v1_0",
+      "path": "/vol/research/Dereverb/ARU_Speech_Corpus_v1_0",
+      "rir_path": "/user/HS228/jz00677/PYTHON_project/RIR_Generator/",
+      "rir": ["rir_5R_stepT60_train.csv", "rir_5R_stepT60_dev.csv"],
+      "sample_rate": 16000,
+      "frame_length": 512,
+      "hop_length": 128,
+      "n_fft": 512,
+      "index_file": ["train.txt", "dev.txt"],
+      "audio_index_file": ["audio_train.txt", "audio_dev.txt"]
+  },
+  "model":{
+    "__channels_down": [[2, 16], [16, 32], [32, 64], [64, 128], [128, 256], [256, 512]],
+    "__channels_up": [[512, 256], [512, 128], [256, 64], [128, 32], [64, 16], [32, 2]],
+    "channels_down": [[2, 16], [16, 32], [32, 64], [64, 128], [128, 256]],
+    "channels_up": [[256, 128], [256, 64], [128, 32], [64, 16], [32, 2]],
+    "kernel_size": [5, 5],
+    "stride": [[2, 2], [1, 2]],
+    "padding": [2, 2],
+    "recurrent_type": "LSTM",
+    "stride_mode": [0, 1, 2],
+    "bidirectional": true
+  },
+
+  "training":{
+      "dropout": 0.1,
+      "weight_decay": 0,
+      "learning_rate": 0.01,
+      "batch_size": 32,
+      "n_epoch": 40,
+      "loss_function": ["MSE", "WPM"],
+      "weight_loss": [0, 0.001, 0.01, 0.1, 1],
+      "target": ["cIRM", "spec", "IRM", "PSM"],
+      "input": "spec"
+  },
+  "normalization":{
+      "input": "feature-wise",
+      "output": {
+        "Q": 1,
+        "C": 0.5
+      }
+  },
+  "inference":{
+    "rir": "/user/HS228/jz00677/PYTHON_project/RIR_Generator/rir_5R_stepT60_test.csv",
+    "output_path": "/vol/research/Dereverb/output_result/cIRM_base",
+    "audio_index": "/vol/research/Dereverb/ARU_Speech_Corpus_v1_0/audio_test.txt",
+    "checkpoint": "/vol/vssp/msos/jz/cIRM_base/checkpoint_9.17/checkpoint_step000360000.pth"
+},
+  "statistic":{
+    "update": false,
+      "clean":{
+        "mean": 0,
+        "std": 1,
+        "energy": 1
+      },
+      "reverb":{
+        "mean": 0,
+        "std": 1,
+        "energy": 1
+      }
+  },
+  "debug": false,
+  "comment": "trained with a large dataset with 3 * 10 RIRs"
+}
