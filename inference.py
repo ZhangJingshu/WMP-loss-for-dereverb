@@ -188,11 +188,6 @@ def do_eval_no_delay(model, device, audio_file, rir, postfix, output_path, confi
         #indices = np.nonzero(mask_hat < 0)
         #mask_hat[indices] = 0
 
-
-    #spec_target = spec_target[:, half_frame_window: -half_frame_window] / config["statistic"]["clean"]["energy"]
-    #spec_hat = spec_reverb[half_frame_window:-half_frame_window, :].T / config["statistic"]["reverb"]["energy"] * mask_hat
-    #spec_target = spec_target[:, half_frame_window: -half_frame_window]
-
     spec_clean = spec_clean.data[:,0,:,:].numpy() + 1j * spec_clean.data[:,1,:,:].numpy()
     spec_reverb = spec_reverb.data[:,0,:,:].numpy() + 1j * spec_reverb.data[:,1,:,:].numpy()
     spec_clean = spec_clean.squeeze()
@@ -326,13 +321,6 @@ def inference_3T60(device, output_path, model = None, rir_file = None, config = 
             mag_angle_dif.append(mag_angle_dif_item)
             index_list.append(index)
 
-    #with open(os.path.join(output_path+'_corr_0', "index.txt"), 'w') as f:
-    #    for item in index_list:
-    #        f.write(item + '\n')
-
-    #with open(os.path.join(output_path+'_corr_1', "index.txt"), 'w') as f:
-    #    for item in index_list:
-    #        f.write(item + '\n')
 
     with open(os.path.join(output_path, "index.txt"), 'w') as f:
         for item in index_list:

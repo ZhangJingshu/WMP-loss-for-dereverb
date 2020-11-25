@@ -47,20 +47,6 @@
     "output_path": "/vol/research/Dereverb/output_result/cIRM_base",
     "audio_index": "/vol/research/Dereverb/ARU_Speech_Corpus_v1_0/audio_test.txt",
     "checkpoint": "/vol/vssp/msos/jz/cIRM_base/checkpoint_9.17/checkpoint_step000360000.pth"
-},
-  "statistic":{
-    "update": false,
-      "clean":{
-        "mean": 0,
-        "std": 1,
-        "energy": 1
-      },
-      "reverb":{
-        "mean": 0,
-        "std": 1,
-        "energy": 1
-      }
   },
   "debug": false,
-  "comment": "trained with a large dataset with 3 * 10 RIRs"
 }

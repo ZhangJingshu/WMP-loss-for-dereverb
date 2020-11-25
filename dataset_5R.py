@@ -17,22 +17,11 @@ class reverb_dataset(object):
         self.audio_filelist = {'train':[], 'test': []}
         self.rir_list = {'train':[], 'test':[]}
         self.speech_list = {'train':[], 'test':[]}
-        #self.sample_filelist = {'train': {'mask': [], 'reverb': []}, 'test': {'mask': [], 'reverb': []}}
-        #self.offset = {'train': [], 'test': []}
-        #self.lengths = {'train': [], 'test': []}
-        #self.num_sample = {'train': [], 'test': []}  #a sample contains frames within a frame window
         self.speech_num_list = {'train': [], 'test': []}
         self.rir_num_list = {'train': [], 'test': []}
         self.n_speech = {'train':[], 'test':[]}
         self.n_rir = {'train':[], 'test':[]}
         self.n_sample = {'train': [], 'test': []}
-        #self.sample_indices = {'train': [], 'test': []}
-        #if config["debug"]:
-        #index_file = {"train": os.path.join(self.path, "train_rir0.txt"),
-        #                "test": os.path.join(self.path, "test_rir0.txt")}
-        #else:
-        #self.index_file = {"train": os.path.join(self.path, config["data"]["index_file"][0]),
-        #                "test": os.path.join(self.path, config["data"]["index_file"][1])}
         self.rir_file = {'train': os.path.join(config["data"]["rir_path"], config['data']['rir'][0]),
                         'test': os.path.join(config["data"]["rir_path"], config['data']['rir'][1])}
         self.audio_index_file = {"train": os.path.join(self.path, config["data"]["audio_index_file"][0]),
@@ -40,7 +29,7 @@ class reverb_dataset(object):
         self.statistic = {"mean": [], "variance": []}   #compute on all training set
         self.load_data()
         #self.read_audio_filelist()
-        #self.compute_statistic(config)
+
 
     def load_audio_filelist(self):
         path = self.path
@@ -55,6 +44,7 @@ class reverb_dataset(object):
             self.n_speech[phase] = len(filelist)
         self.audio_filelist["test"] = self.audio_filelist["test"][0: 15]   #use 15 speech combined with dev RIRs for validation
         self.n_speech["test"] = 15
+
 
     def load_rir(self):
         #input is rir file path
@@ -89,7 +79,6 @@ class reverb_dataset(object):
                 self.speech_list[phase].append(wav)
 
 
-
     def load_data(self):
         path = self.path
         self.load_audio_filelist()
@@ -99,65 +88,8 @@ class reverb_dataset(object):
         self.n_sample["test"] = self.n_rir["test"] * 15
         #print("start loading data")
 
-        #for phase in ["train","test"]:
-        #    self.speech_num_list[phase] = np.arange(0, self.n_speech[phase])
-        #    self.rir_num_list[phase] = np.arange(0, self.n_rir[phase])
-
-        #    self.rir_num_list[phase] = np.tile(self.rir_num_list[phase], self.n_speech[phase] // 10)
-        #    self.n_sample[phase] = len(self.rir_num_list[phase])
-
-        #    self.speech_num_list[phase] = np.repeat(self.speech_num_list[phase], self.n_sample[phase] // self.n_speech[phase])
-
-        #    assert len(self.speech_num_list[phase]) == len(self.rir_num_list[phase])
-        #    assert len(self.speech_num_list[phase]) == self.n_sample[phase]
-
-
-    def compute_statistic(self, config):
-        #print("start computing statistic")
-        update = config["statistic"]["update"]
-        if not update:
-            try:
-                statistic = np.load(os.path.join(self.path, "statistic_spec.npy"), allow_pickle=True).item()
-                #print("finish loading statistic")
-            except FileNotFoundError:
-                update = True
-
-        if update is True:
-            count = 0
-            n_features = config["data"]["n_fft"] // 2 + 1
-            sum_feature = np.zeros([1, n_features])
-            sum_squared_feature = np.zeros([1, n_features])
-            for ii in range(0, self.num_sample["train"]):
-                length = self.lengths["train"][ii]
-                offset = self.offset["train"][ii]
-                spec = np.load(self.sample_filelist["train"]["reverb"][ii])[offset: offset+length, :]
-                features = np.concatenate((np.real(spec), np.imag(spec)), axis = 1)
-                sum_feature = sum_feature + np.sum(features, axis = 0)
-                sum_squared_feature = sum_squared_feature + np.sum(features**2, axis = 0)
-                count = count + length
-
-            statistic = {"mean": [], "std": []}
-            statistic["mean"] = sum_feature / count
-            statistic["std"] = np.sqrt(sum_squared_feature / count - statistic["mean"]**2)
-            np.save(os.path.join(self.path, "statistic_spec.npy"), statistic)
-
-        statistic["mean"] = statistic["mean"].reshape(2,-1)
-        statistic["std"] = statistic["std"].reshape(2,-1)
-        assert statistic["mean"].shape == (2, config["data"]["n_fft"] // 2 + 1)
-
-        config["statistic"]["reverb"]["mean"] = statistic["mean"]
-        config["statistic"]["reverb"]["std"] = statistic["std"]
-        #print("finish computing statistic")
-
     def get_data(self, idx, phase):
-        #print("reading data")
-        #speech_index = self.speech_num_list[phase][idx][1]
-        #rir_index = self.rir_num_list[phase][idx][0]
-        #wav_clean = librosa.core.load(self.audio_filelist[phase][speech_index], sr = self.sample_rate)[0]
-        #wav_clean = librosa.effects.trim(wav_clean, top_db = 20, frame_length = self.config['data']['frame_length'], hop_length = self.config['data']['hop_length'])[0]
 
-        #rir = self.rir_list[phase][rir_index]
-        #length = len(wav_clean)
         rir_idx = idx[0]
         speech_idx = idx[1]
 
@@ -166,6 +98,7 @@ class reverb_dataset(object):
         length = len(wav_clean)
 
         return (wav_clean, rir, length)  #shape: t * f
+
 
 class PyTorchDataset(object):
     def __init__(self, dataset, phase):
@@ -201,14 +134,6 @@ class MySampler(torch.utils.data.Sampler):
         indices = np.concatenate((indices_rir.reshape(-1, 1), indices_speech.reshape(-1, 1)), 1)
 
         return iter(indices)
-        #indices_speech = np.copy(self.indices).reshape(-1, 1)
-        #indices_rir = np.copy(self.indices).reshape(-1, 1)
-
-        #np.random.shuffle(indices_speech)
-        #np.random.shuffle(indices_rir)
-        #indices = np.concatenate((indices_rir, indices_speech), 1)
-
-        #return iter(indices)
 
 
 def collate_fn(batch):
@@ -242,31 +167,13 @@ def collate_fn(batch):
             x = np.pad(x, [0, max_length-len(x)], mode = 'constant', constant_values = 0)
         x_batch = np.array([x]) if x_batch is None else np.append(x_batch, np.array([x]), axis = 0)
         y_batch = np.array([y]) if y_batch is None else np.append(y_batch, np.array([y]), axis = 0)
-        #y_batch_real = np.array(item[1]) if y_batch_real is None else np.append(y_batch_real, np.array(item[1]), axis = 0)
-        #y_batch_imag = np.array(item[2]) if y_batch_imag is None else np.append(y_batch_imag, np.array(item[2]), axis = 0)
-
-    #x_batch = np.array(x_batch)
-    #y_batch = np.array(y_batch)
-
-    #mask_target = y_batch / x_batch[:, 5, :]
-
-    #y_batch = util.normalization_range_0_1(y_batch)
-    #y_batch = util.normalization_0m_1v(y_batch.T).T  #output normalized over frequency bins
-    #x_batch = np.reshape(x_batch, (batch_size, -1))
-    #x_batch = np.append(np.real(x_batch), np.imag(x_batch), axis = 1)
-    #x_batch = util.normalization_0m_1v(x_batch, axis = 1)
 
     x_batch = torch.FloatTensor(np.array(x_batch))
     y_batch = torch.FloatTensor(np.array(y_batch))
     assert x_batch.size(0) == batch_size
     assert y_batch.size(0) == batch_size
-    #y_batch_real = util.target_compression(np.real(mask_target))
-    #y_batch_imag = util.target_compression(np.imag(mask_target))
-    #y_batch_real = util.target_compression(np.real(y_batch), config)
-    #y_batch_imag = util.target_compression(np.imag(y_batch), config)
-    #y_batch_real = torch.FloatTensor(y_batch_real)
-    #y_batch_imag = torch.FloatTensor(y_batch_imag)
-    return x_batch, y_batch  #(batch_size, 2, t, f) 2 channels represent real and imag part
+
+    return x_batch, y_batch  #(batch_size, t) waveform of reverb speech and clean speech
     #shape: (batch_size, n_features)
 
 def get_dataloader(config):
@@ -281,4 +188,3 @@ def get_dataloader(config):
                     collate_fn = collate_fn, num_workers = 2, pin_memory = True)
         dataloader[phase] = loader
     return dataloader
-    #filelist is returned for evaluation using whole audio instead of t-f units

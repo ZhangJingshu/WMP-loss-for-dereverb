@@ -64,58 +64,6 @@ class WPMLoss(nn.Module):    #weighted phase magnitude loss
             raise ValueError("NAN encountered in loss")
         return loss
 
-class GDMLoss(nn.Module):   #group delay and magnitude
-    def __init__(self, weight, feature = 'phase'):
-        super(GDMLoss, self).__init__()
-        self.weight = weight
-        self.feature = feature
-
-    def forward(self, y_real, y_imag, y_real_hat, y_imag_hat):
-        pi = torch.FloatTensor([np.pi]).cuda()
-        mag = torch.sqrt(y_real**2 + y_imag**2)
-        mag_hat = torch.sqrt(y_real_hat**2 + y_imag_hat**2)
-        dif_mag = mag_hat - mag
-
-        #theta = torch.atan2(y_imag, y_real)
-        #theta_hat = torch.atan2(y_imag_hat, y_real_hat)
-        #dif_theta = 2 * mag * torch.sin((theta_hat - theta)/2)  #0 <= dif_thera <= 2*mag
-
-        theta = torch.atan2(y_imag, y_real)
-        theta_hat = torch.atan2(y_imag_hat, y_real_hat)
-        if self.feature == "GD":
-            group_delay = theta
-            group_delay[:, 1:] = theta[:, 0:-1] - theta[:, 1:]
-            group_delay_hat = theta_hat
-            group_delay_hat[:, 1:] = theta_hat[:, 0:-1] - theta_hat[:, 1:]
-            group_delay_loss = -torch.cos(group_delay - group_delay_hat)
-
-            loss = torch.mean(dif_mag**2 + self.weight * mag**2 * group_delay_loss)
-        elif self.feature == "phase":
-            phase_loss = -torch.cos(theta - theta_hat)
-            loss = torch.mean(dif_mag**2 + self.weight * 2*mag**2 * phase_loss)
-        elif self.feature == "IF":
-            instantaneous_freq = theta
-            instantaneous_freq[1:, :] = theta[1:, :] - theta[0:-1, :]
-            instantaneous_freq_hat = theta_hat
-            instantaneous_freq_hat[1:, :] = theta_hat[1:, :] - theta_hat[0:-1, :]
-            instantaneous_freq_loss = -torch.cos(instantaneous_freq - instantaneous_freq_hat)
-
-            loss = torch.mean(dif_mag**2 + self.weight * mag**2 * instantaneous_freq_loss)
-        elif self.feature == "both":
-            group_delay = theta
-            group_delay[:, 1:] = theta[:, 0:-1] - theta[:, 1:]
-            group_delay_hat = theta_hat
-            group_delay_hat[:, 1:] = theta_hat[:, 0:-1] - theta_hat[:, 1:]
-            group_delay_loss = -torch.cos(group_delay - group_delay_hat)
-
-            instantaneous_freq = theta
-            instantaneous_freq[1:, :] = theta[1:, :] - theta[0:-1, :]
-            instantaneous_freq_hat = theta_hat
-            instantaneous_freq_hat[1:, :] = theta_hat[1:, :] - theta_hat[0:-1, :]
-            instantaneous_freq_loss = -torch.cos(instantaneous_freq - instantaneous_freq_hat)
-
-            loss = torch.mean(dif_mag**2 + self.weight * mag**2 * (instantaneous_freq_loss + group_delay_loss))
-        return loss
 
 def plot_loss(loss_train, loss_test, loss_mag_train, loss_mag_test, loss_phase_train, loss_phase_test, loss_angle_train, loss_angle_test, path):
     fig = plt.figure(figsize = (12, 6))
@@ -170,6 +118,7 @@ def plot_loss(loss_train, loss_test, loss_mag_train, loss_mag_test, loss_phase_t
     fig.savefig(os.path.join(path, "loss_angle.png"))
     plt.close(fig)
 
+
 def save_checkpoint(checkpoint_save_path, model, optimizer = None, filename = None):
     global loss_train, loss_test
     global loss_mag_train, loss_mag_test, loss_phase_train, loss_phase_test, loss_angle_train, loss_angle_test
@@ -194,8 +143,8 @@ def save_checkpoint(checkpoint_save_path, model, optimizer = None, filename = No
         "loss_angle_test": loss_angle_test
     }, checkpoint_path)
 
-
     print("Saved checkpoint:", checkpoint_path)
+
 
 def load_checkpoint(path, model, optimizer):
     global loss_train, loss_test
@@ -226,30 +175,6 @@ def load_checkpoint(path, model, optimizer):
     logger.info("checkpoint loaded successfully from: " + path)
 
     return True
-
-def save_mask_figure(out_path, mask_real_hat = None, mask_real = None, mask_imag_hat = None, mask_imag = None, phase = None):
-    global global_step, global_epoch
-
-    os.makedirs(out_path, exist_ok = True)
-    loss = [np.mean((mask_real_hat - mask_real)**2), np.mean((mask_imag_hat - mask_imag)**2)]
-
-    fig = plt.figure(figsize = (12, 12))
-    axes = fig.subplots(2,2)
-    librosa.display.specshow(np.log(mask_real+1e-8), ax = axes[0, 0])
-    axes[0, 0].set_title("mask_real")
-    librosa.display.specshow(np.log(mask_real_hat+1e-8), ax = axes[0, 1])
-    axes[0, 1].set_title("mask_real_predicted")
-    librosa.display.specshow(np.log(mask_imag+1e-8), ax = axes[1, 0])
-    axes[1, 0].set_title("mask_imag")
-    librosa.display.specshow(np.log(mask_imag_hat+1e-8), ax = axes[1, 1])
-    axes[1, 1].set_title("mask_imag_predicted")
-
-    fig.suptitle("loss: "+ str(loss))
-
-    fig.savefig(os.path.join(out_path, "epoch{:04d}_step{:07d}_{}_mask_twopart.png".format(
-                        global_epoch, global_step, phase)))
-    plt.close(fig)
-
 
 
 def save_result(out_path, y_hat=None, y_target=None, spec_hat=None, spec_target=None, mask_hat = None, mask = None, phase=None, config=None):
@@ -345,10 +270,12 @@ def save_result(out_path, y_hat=None, y_target=None, spec_hat=None, spec_target=
         plt.close(fig)
     #save_spectrogram_plot(path, y_hat, y_target, config["dataset"]["sample_rate"])
 
+
 def load_config(config_filepath):
     config_file = open(config_filepath, 'r')
     with config_file:
         return json.load(config_file)
+
 
 def setHandler(filename = "/vol/vssp/msos/jz/complex_nn/checkpoint/train.log"):
     handler = logging.FileHandler(filename = filename, mode = 'a')
@@ -808,23 +735,6 @@ if __name__ == "__main__":
             evaluation.evaluation_mag_angle_dif(output_path, 'index.txt', config['data'])
             logger.info("evaluation finish!")
             logger.removeHandler(handler)
-
-            #if not load_checkpoint(os.path.join(checkpoint_save_path, "best_mag_model.pth"), best_model, optimizer):
-            #    logger.info("failed to load best_model.pth")
-            #    best_model = model
-            #rir_file = "/user/HS228/jz00677/PYTHON_project/RIR_Generator/rir_5R_stepT60_test.csv"
-            #output_path = os.path.join(checkpoint_save_path, "output_result_step_T60_bestmag")
-            #os.makedirs(output_path, exist_ok = True)
-            #handler = setHandler(filename = os.path.join(output_path, "inference.log"))
-            #logger.addHandler(handler)
-            #inference.inference_step_T60(device = 'cuda', output_path = output_path, rir_file = rir_file, model = best_model, config = config, logger = logger)
-            #T60_list = ['0.3s', '0.4s', '0.5s', '0.6s', '0.7s', '0.8s', '0.9s', '1s', '1.1s', '1.2s', '1.3s', '1.4s', '1.5s']
-            #rir_per_T60 = 20
-            #n_audio = 10
-            #evaluation.evaluation_step_T60(output_path, "index.txt", T60_list, rir_per_T60, n_audio)
-            #evaluation.evaluation_mag_angle_dif(output_path, 'index.txt', config['data'])
-            #logger.info("evaluation finish!")
-            #logger.removeHandler(handler)
 
 
     sys.exit(0)
